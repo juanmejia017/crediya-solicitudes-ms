@@ -1,21 +1,21 @@
 # CrediYa — Microservicio de Solicitudes (`crediya-solicitudes-ms`)
 
-Microservicio **reactivo (Spring WebFlux + R2DBC)** construido con Clean Architecture (scaffold de Bancolombia, `reactive=true`).
+Microservicio **imperativo (Spring MVC + JPA)** construido con Clean Architecture (scaffold de Bancolombia, `reactive=false`).
 Sigue la misma estructura del microservicio de autenticación ubicado en la raíz del repositorio.
 
 ## Estructura
 
 | Módulo | Contenido |
 |---|---|
-| `domain/model` | Modelos `Solicitud`, `TipoPrestamo`, `Estado`, sus gateways, `TransactionalGateway` reactivo y excepciones de negocio |
-| `domain/usecase` | `SolicitudUseCase`: valida, verifica el tipo de préstamo, asigna el estado inicial y guarda en una transacción reactiva |
-| `infrastructure/driven-adapters/r2dbc-postgresql` | Entidades, repositorios reactivos, adaptadores, `TransactionalOperator` y scripts SQL (`db/schema.sql`, `db/data.sql`) |
-| `infrastructure/entry-points/reactive-web` | `RouterRest` + `Handler` (functional endpoints), filtro de traza `X-Trace-Id` y manejador global de errores |
+| `domain/model` | Modelos `Solicitud`, `TipoPrestamo`, `Estado`, sus gateways, `TransactionalGateway` y excepciones de negocio |
+| `domain/usecase` | `SolicitudUseCase`: valida, verifica el tipo de préstamo, asigna el estado inicial y guarda en una sola transacción |
+| `infrastructure/driven-adapters/jpa-repository` | Entidades JPA, repositorios, adaptadores, `TransactionalAdapter` (`TransactionTemplate`) y carga de datos iniciales |
+| `infrastructure/entry-points/api-rest` | `ApiRest` (`@RestController`), filtro de traza `X-Trace-Id` y `GlobalExceptionHandler` |
 | `applications/app-service` | Arranque de la aplicación y configuración |
 
 ## Modelo de datos
 
-Tablas `estados`, `tipo_prestamo` y `solicitud` según el diagrama de diseño. Se crean automáticamente al arrancar
+Tablas `estados`, `tipo_prestamo` y `solicitud` según el diagrama de diseño. Hibernate las crea al arrancar
 (si no existen) y se cargan los estados (`Pendiente de revisión`, `Revisión manual`, `Aprobada`, `Rechazada`)
 y los tipos de préstamo iniciales. La tabla `solicitud` guarda además `documento_identidad`, que pide la historia de usuario.
 
@@ -35,10 +35,7 @@ cd crediya-solicitudes-ms
 
 | Variable | Descripción | Valor por defecto |
 |---|---|---|
-| `DB_HOST` | Host de PostgreSQL | `localhost` |
-| `DB_PORT` | Puerto | `5432` |
-| `DB_NAME` | Base de datos | `crediya_db` |
-| `DB_SCHEMA` | Esquema | `public` |
+| `DB_URL` | URL JDBC de PostgreSQL | `jdbc:postgresql://localhost:5432/crediya_db` |
 | `DB_USERNAME` / `DB_PASSWORD` | Credenciales | *(obligatorias)* |
 
 El servicio queda en `http://localhost:8081`.
@@ -72,4 +69,4 @@ Reglas:
 | 500 | Error inesperado (mensaje genérico, el detalle solo queda en el log) |
 
 Todas las respuestas incluyen el header `X-Trace-Id` (si lo envías, se reutiliza) y los errores lo devuelven en el campo
-`traceId`, para buscar la petición en los logs.
+`traceId`. Ese mismo id aparece al inicio de cada línea de log de la petición.
