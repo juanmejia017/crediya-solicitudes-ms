@@ -13,17 +13,18 @@ import co.com.crediya.model.tipoprestamo.gateways.TipoPrestamoRepository;
 import co.com.crediya.model.transaction.gateways.TransactionalGateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SolicitudUseCaseTest {
@@ -63,49 +64,38 @@ class SolicitudUseCaseTest {
 
     @Test
     void registraSolicitudConEstadoPendienteDeRevision() {
-        StepVerifier.create(useCase.registrar(solicitudValida().build()))
-                .assertNext(creada -> {
-                    assertEquals(1L, creada.getIdSolicitud());
-                    assertEquals(1L, creada.getIdEstado());
-                    assertEquals(Estado.PENDIENTE_REVISION, creada.getEstado());
-                    assertEquals("Libre inversión", creada.getTipoPrestamo());
-                    assertEquals("juan@correo.com", creada.getEmail());
-                })
-                .verifyComplete();
+        Solicitud creada = useCase.registrar(solicitudValida().build());
 
+        assertEquals(1L, creada.getIdSolicitud());
+        assertEquals(1L, creada.getIdEstado());
+        assertEquals(Estado.PENDIENTE_REVISION, creada.getEstado());
+        assertEquals("Libre inversión", creada.getTipoPrestamo());
+        assertEquals("juan@correo.com", creada.getEmail());
         assertEquals(1, solicitudRepository.guardadas.size());
     }
 
     @Test
     void ignoraEstadoEnviadoPorElClienteYUsaElInicial() {
-        Solicitud conEstado = solicitudValida().idEstado(99L).idSolicitud(50L).build();
+        Solicitud creada = useCase.registrar(solicitudValida().idEstado(99L).idSolicitud(50L).build());
 
-        StepVerifier.create(useCase.registrar(conEstado))
-                .assertNext(creada -> {
-                    assertEquals(1L, creada.getIdEstado());
-                    assertEquals(1L, creada.getIdSolicitud());
-                })
-                .verifyComplete();
+        assertEquals(1L, creada.getIdEstado());
+        assertEquals(1L, creada.getIdSolicitud());
     }
 
     @Test
     void ejecutaElRegistroDentroDeUnaTransaccion() {
-        StepVerifier.create(useCase.registrar(solicitudValida().build()))
-                .expectNextCount(1)
-                .verifyComplete();
+        useCase.registrar(solicitudValida().build());
 
         assertEquals(1, transactionalGateway.ejecuciones);
     }
 
     @Test
     void rechazaCamposObligatoriosVacios() {
-        StepVerifier.create(useCase.registrar(Solicitud.builder().email(" ").build()))
-                .expectErrorSatisfies(error -> {
-                    assertTrue(error instanceof DatosInvalidosException);
-                    assertEquals(5, ((DatosInvalidosException) error).getErrores().size());
-                })
-                .verify();
+        Solicitud vacia = Solicitud.builder().email(" ").build();
 
+        DatosInvalidosException ex = assertThrows(DatosInvalidosException.class, () -> useCase.registrar(vacia));
+
+        assertEquals(5, ex.getErrores().size());
         assertEquals(0, transactionalGateway.ejecuciones);
         assertTrue(solicitudRepository.guardadas.isEmpty());
     }
@@ -120,53 +110,44 @@ class SolicitudUseCaseTest {
                 .idTipoPrestamo(-3L)
                 .build();
 
-        StepVerifier.create(useCase.registrar(invalida))
-                .expectErrorSatisfies(error ->
-                        assertEquals(5, ((DatosInvalidosException) error).getErrores().size()))
-                .verify();
+        DatosInvalidosException ex = assertThrows(DatosInvalidosException.class, () -> useCase.registrar(invalida));
+
+        assertEquals(5, ex.getErrores().size());
     }
 
     @Test
     void rechazaCuerpoNulo() {
-        StepVerifier.create(useCase.registrar(null))
-                .expectError(DatosInvalidosException.class)
-                .verify();
+        assertThrows(DatosInvalidosException.class, () -> useCase.registrar(null));
     }
 
     @Test
     void rechazaTipoDePrestamoInexistente() {
-        StepVerifier.create(useCase.registrar(solicitudValida().idTipoPrestamo(77L).build()))
-                .expectError(TipoPrestamoNoExisteException.class)
-                .verify();
+        Solicitud solicitud = solicitudValida().idTipoPrestamo(77L).build();
 
+        assertThrows(TipoPrestamoNoExisteException.class, () -> useCase.registrar(solicitud));
         assertTrue(solicitudRepository.guardadas.isEmpty());
     }
 
     @Test
     void rechazaMontoFueraDelRangoDelTipo() {
-        StepVerifier.create(useCase.registrar(solicitudValida().monto(new BigDecimal("900000000")).build()))
-                .expectError(MontoFueraDeRangoException.class)
-                .verify();
+        Solicitud solicitud = solicitudValida().monto(new BigDecimal("900000000")).build();
 
+        assertThrows(MontoFueraDeRangoException.class, () -> useCase.registrar(solicitud));
         assertTrue(solicitudRepository.guardadas.isEmpty());
     }
 
     @Test
     void fallaConErrorTecnicoSiNoExisteElEstadoInicial() {
         estadoRepository.estados.clear();
+        Solicitud solicitud = solicitudValida().build();
 
-        StepVerifier.create(useCase.registrar(solicitudValida().build()))
-                .expectError(TechnicalException.class)
-                .verify();
-
+        assertThrows(TechnicalException.class, () -> useCase.registrar(solicitud));
         assertTrue(solicitudRepository.guardadas.isEmpty());
     }
 
     @Test
     void noGuardaDatosDeLecturaComoEstadoOTipo() {
-        StepVerifier.create(useCase.registrar(solicitudValida().estado("Aprobada").build()))
-                .expectNextCount(1)
-                .verifyComplete();
+        useCase.registrar(solicitudValida().estado("Aprobada").build());
 
         assertNull(solicitudRepository.guardadas.get(0).getEstado());
     }
@@ -175,9 +156,9 @@ class SolicitudUseCaseTest {
         private final List<Solicitud> guardadas = new ArrayList<>();
 
         @Override
-        public Mono<Solicitud> save(Solicitud solicitud) {
+        public Solicitud save(Solicitud solicitud) {
             guardadas.add(solicitud);
-            return Mono.just(solicitud.toBuilder().idSolicitud((long) guardadas.size()).build());
+            return solicitud.toBuilder().idSolicitud((long) guardadas.size()).build();
         }
     }
 
@@ -185,8 +166,8 @@ class SolicitudUseCaseTest {
         private final Map<Long, TipoPrestamo> tipos = new HashMap<>();
 
         @Override
-        public Mono<TipoPrestamo> findById(Long idTipoPrestamo) {
-            return Mono.justOrEmpty(tipos.get(idTipoPrestamo));
+        public Optional<TipoPrestamo> findByIdTipoPrestamo(Long idTipoPrestamo) {
+            return Optional.ofNullable(tipos.get(idTipoPrestamo));
         }
     }
 
@@ -194,8 +175,8 @@ class SolicitudUseCaseTest {
         private final Map<String, Estado> estados = new HashMap<>();
 
         @Override
-        public Mono<Estado> findByNombre(String nombre) {
-            return Mono.justOrEmpty(estados.get(nombre));
+        public Optional<Estado> findByNombre(String nombre) {
+            return Optional.ofNullable(estados.get(nombre));
         }
     }
 
@@ -203,11 +184,9 @@ class SolicitudUseCaseTest {
         private int ejecuciones;
 
         @Override
-        public <T> Mono<T> execute(Mono<T> operation) {
-            return Mono.defer(() -> {
-                ejecuciones++;
-                return operation;
-            });
+        public <T> T execute(Supplier<T> operation) {
+            ejecuciones++;
+            return operation.get();
         }
     }
 }

@@ -12,7 +12,6 @@ import co.com.crediya.model.tipoprestamo.TipoPrestamo;
 import co.com.crediya.model.tipoprestamo.gateways.TipoPrestamoRepository;
 import co.com.crediya.model.transaction.gateways.TransactionalGateway;
 import lombok.RequiredArgsConstructor;
-import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -34,37 +33,38 @@ public class SolicitudUseCase {
     private final EstadoRepository estadoRepository;
     private final TransactionalGateway transactionalGateway;
 
-    public Mono<Solicitud> registrar(Solicitud solicitud) {
-        return Mono.fromCallable(() -> {
-                    validar(solicitud);
-                    return normalizar(solicitud);
-                })
-                // Validación del tipo, búsqueda del estado inicial y guardado en una sola transacción reactiva
-                .flatMap(normalizada -> transactionalGateway.execute(registrarEnTransaccion(normalizada)));
+    public Solicitud registrar(Solicitud solicitud) {
+        validar(solicitud);
+        Solicitud normalizada = normalizar(solicitud);
+
+        // Validación del tipo, búsqueda del estado inicial y guardado en una sola transacción
+        return transactionalGateway.execute(() -> registrarEnTransaccion(normalizada));
     }
 
-    private Mono<Solicitud> registrarEnTransaccion(Solicitud solicitud) {
-        return tipoPrestamoRepository.findById(solicitud.getIdTipoPrestamo())
-                .switchIfEmpty(Mono.error(() -> new TipoPrestamoNoExisteException(solicitud.getIdTipoPrestamo())))
-                .flatMap(tipo -> validarMontoEnRango(solicitud, tipo))
-                .flatMap(tipo -> estadoRepository.findByNombre(Estado.PENDIENTE_REVISION)
-                        .switchIfEmpty(Mono.error(() -> new TechnicalException("ESTADO_INICIAL_NO_CONFIGURADO",
-                                "No existe el estado '" + Estado.PENDIENTE_REVISION + "' en la base de datos")))
-                        .flatMap(estado -> solicitudRepository.save(solicitud.toBuilder()
-                                        .idEstado(estado.getIdEstado())
-                                        .build())
-                                .map(guardada -> guardada.toBuilder()
-                                        .estado(estado.getNombre())
-                                        .tipoPrestamo(tipo.getNombre())
-                                        .build())));
+    private Solicitud registrarEnTransaccion(Solicitud solicitud) {
+        TipoPrestamo tipo = tipoPrestamoRepository.findByIdTipoPrestamo(solicitud.getIdTipoPrestamo())
+                .orElseThrow(() -> new TipoPrestamoNoExisteException(solicitud.getIdTipoPrestamo()));
+        validarMontoEnRango(solicitud, tipo);
+
+        Estado estado = estadoRepository.findByNombre(Estado.PENDIENTE_REVISION)
+                .orElseThrow(() -> new TechnicalException("ESTADO_INICIAL_NO_CONFIGURADO",
+                        "No existe el estado '" + Estado.PENDIENTE_REVISION + "' en la base de datos"));
+
+        Solicitud guardada = solicitudRepository.save(solicitud.toBuilder()
+                .idEstado(estado.getIdEstado())
+                .build());
+
+        return guardada.toBuilder()
+                .estado(estado.getNombre())
+                .tipoPrestamo(tipo.getNombre())
+                .build();
     }
 
-    private Mono<TipoPrestamo> validarMontoEnRango(Solicitud solicitud, TipoPrestamo tipo) {
+    private void validarMontoEnRango(Solicitud solicitud, TipoPrestamo tipo) {
         BigDecimal monto = solicitud.getMonto();
         if (monto.compareTo(tipo.getMontoMinimo()) < 0 || monto.compareTo(tipo.getMontoMaximo()) > 0) {
-            return Mono.error(new MontoFueraDeRangoException(tipo.getNombre(), tipo.getMontoMinimo(), tipo.getMontoMaximo()));
+            throw new MontoFueraDeRangoException(tipo.getNombre(), tipo.getMontoMinimo(), tipo.getMontoMaximo());
         }
-        return Mono.just(tipo);
     }
 
     private Solicitud normalizar(Solicitud solicitud) {

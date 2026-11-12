@@ -1,8 +1,9 @@
 package co.com.crediya.model.tipoprestamo.gateways;
 
 import co.com.crediya.model.tipoprestamo.TipoPrestamo;
-import reactor.core.publisher.Mono;
+
+import java.util.Optional;
 
 public interface TipoPrestamoRepository {
-    Mono<TipoPrestamo> findById(Long idTipoPrestamo);
+    Optional<TipoPrestamo> findByIdTipoPrestamo(Long idTipoPrestamo);
 }
