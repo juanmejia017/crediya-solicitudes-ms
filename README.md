@@ -1,7 +1,7 @@
 # CrediYa — Microservicio de Solicitudes (`crediya-solicitudes-ms`)
 
 Microservicio **imperativo (Spring MVC + JPA)** construido con Clean Architecture (scaffold de Bancolombia, `reactive=false`).
-Sigue la misma estructura del microservicio de autenticación ubicado en la raíz del repositorio.
+Sigue la misma estructura y convenciones que `crediya-autenticacion-ms`.
 
 ## Estructura
 
