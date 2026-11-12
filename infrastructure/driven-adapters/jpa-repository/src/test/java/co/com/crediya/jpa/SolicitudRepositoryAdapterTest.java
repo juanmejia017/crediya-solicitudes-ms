@@ -35,9 +35,13 @@ class SolicitudRepositoryAdapterTest {
                 .documentoIdentidad("1020304050").idEstado(1L).idTipoPrestamo(2L)
                 .build();
         when(repository.save(any(SolicitudEntity.class))).thenAnswer(invocation -> {
-            SolicitudEntity entity = invocation.getArgument(0);
-            entity.setIdSolicitud(10L);
-            return entity;
+            SolicitudEntity enviada = invocation.getArgument(0);
+            return SolicitudEntity.builder()
+                    .idSolicitud(10L)
+                    .monto(enviada.getMonto()).plazo(enviada.getPlazo()).email(enviada.getEmail())
+                    .documentoIdentidad(enviada.getDocumentoIdentidad())
+                    .idEstado(enviada.getIdEstado()).idTipoPrestamo(enviada.getIdTipoPrestamo())
+                    .build();
         });
 
         Solicitud guardada = adapter.save(solicitud);
