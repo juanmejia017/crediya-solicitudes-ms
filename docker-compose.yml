@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: crediya-solicitudes-postgres
+    environment:
+      POSTGRES_DB: crediya_solicitudes_db
+      POSTGRES_USER: ${DB_USERNAME:-crediya}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define la variable DB_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - crediya-solicitudes-pgdata:/var/lib/postgresql/data
+
+volumes:
+  crediya-solicitudes-pgdata:

@@ -1,7 +1,9 @@
 # CrediYa — Microservicio de Solicitudes (`crediya-solicitudes-ms`)
 
 Microservicio **imperativo (Spring MVC + JPA)** construido con Clean Architecture (scaffold de Bancolombia, `reactive=false`).
-Sigue la misma estructura y convenciones que `crediya-autenticacion-ms`.
+Es un repositorio independiente: tiene su propio build Gradle, su propia base de datos y su propio `docker-compose.yml`.
+Sigue la misma estructura y convenciones que el microservicio de autenticación
+([`crediya-autenticacion-ms`](https://github.com/juanmejia017/crediya-autenticacion-ms)).
 
 ## Estructura
 
@@ -21,22 +23,23 @@ y los tipos de préstamo iniciales. La tabla `solicitud` guarda además `documen
 
 ## Cómo ejecutarlo (PowerShell)
 
-Usa el mismo contenedor de PostgreSQL del `docker-compose.yml` de la raíz.
-
 ```powershell
+cd C:\Users\juanm\crediya-solicitudes-ms
 $env:DB_USERNAME="crediya"
 $env:DB_PASSWORD="crediya"
 
-docker compose up -d            # desde la raíz del repositorio
-cd crediya-solicitudes-ms
+docker compose up -d
 .\gradlew.bat clean build
 .\gradlew.bat :app-service:bootRun
 ```
 
 | Variable | Descripción | Valor por defecto |
 |---|---|---|
-| `DB_URL` | URL JDBC de PostgreSQL | `jdbc:postgresql://localhost:5432/crediya_db` |
+| `DB_URL` | URL JDBC de PostgreSQL | `jdbc:postgresql://localhost:5433/crediya_solicitudes_db` |
 | `DB_USERNAME` / `DB_PASSWORD` | Credenciales | *(obligatorias)* |
+
+La base de datos de este microservicio corre en el contenedor `crediya-solicitudes-postgres`, puerto **5433**,
+para no chocar con la de autenticación (5432).
 
 El servicio queda en `http://localhost:8081`.
 
