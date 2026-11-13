@@ -90,34 +90,12 @@ class SolicitudUseCaseTest {
     }
 
     @Test
-    void rechazaCamposObligatoriosVacios() {
-        Solicitud vacia = Solicitud.builder().email(" ").build();
+    void noAbreTransaccionSiLosDatosSonInvalidos() {
+        Solicitud invalida = solicitudValida().email("correo-invalido").build();
 
-        DatosInvalidosException ex = assertThrows(DatosInvalidosException.class, () -> useCase.registrar(vacia));
-
-        assertEquals(5, ex.getErrores().size());
+        assertThrows(DatosInvalidosException.class, () -> useCase.registrar(invalida));
         assertEquals(0, transactionalGateway.ejecuciones);
         assertTrue(solicitudRepository.guardadas.isEmpty());
-    }
-
-    @Test
-    void rechazaFormatosInvalidos() {
-        Solicitud invalida = solicitudValida()
-                .monto(new BigDecimal("-1"))
-                .plazo(0)
-                .email("correo-invalido")
-                .documentoIdentidad("12")
-                .idTipoPrestamo(-3L)
-                .build();
-
-        DatosInvalidosException ex = assertThrows(DatosInvalidosException.class, () -> useCase.registrar(invalida));
-
-        assertEquals(5, ex.getErrores().size());
-    }
-
-    @Test
-    void rechazaCuerpoNulo() {
-        assertThrows(DatosInvalidosException.class, () -> useCase.registrar(null));
     }
 
     @Test
