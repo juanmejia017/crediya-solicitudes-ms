@@ -8,7 +8,7 @@ spring:
   profiles:
     include: null
   datasource:
-    url: "${DB_URL:jdbc:postgresql://localhost:5432/crediya_db}"
+    url: "${DB_URL:jdbc:postgresql://localhost:5433/crediya_solicitudes_db}"
     username: "${DB_USERNAME}"
     password: "${DB_PASSWORD}"
     driverClassName: "org.postgresql.Driver"
