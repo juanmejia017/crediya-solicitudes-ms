@@ -1,35 +1,32 @@
 package co.com.crediya.jpa;
 
 import co.com.crediya.jpa.entity.SolicitudEntity;
-import co.com.crediya.jpa.helper.AdapterOperations;
 import co.com.crediya.jpa.repository.SolicitudJpaRepository;
 import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.reactivecommons.utils.ObjectMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Repository
-public class SolicitudRepositoryAdapter extends AdapterOperations<Solicitud, SolicitudEntity, Long, SolicitudJpaRepository>
-        implements SolicitudRepository {
+@RequiredArgsConstructor
+public class SolicitudRepositoryAdapter implements SolicitudRepository {
 
-    public SolicitudRepositoryAdapter(SolicitudJpaRepository repository, ObjectMapper mapper) {
-        super(repository, mapper, SolicitudRepositoryAdapter::toDomain);
-    }
+    private final SolicitudJpaRepository repository;
 
     @Override
     @Transactional
     public Solicitud save(Solicitud solicitud) {
         log.info("Persistiendo nueva solicitud (tipo={})", solicitud.getIdTipoPrestamo());
-        Solicitud guardada = super.save(solicitud);
+        SolicitudEntity entidad = toData(solicitud);
+        Solicitud guardada = toDomain(repository.save(entidad));
         log.info("Solicitud persistida con id {}", guardada.getIdSolicitud());
         return guardada;
     }
 
-    @Override
-    protected SolicitudEntity toData(Solicitud solicitud) {
+    private static SolicitudEntity toData(Solicitud solicitud) {
         return SolicitudEntity.builder()
                 .idSolicitud(solicitud.getIdSolicitud())
                 .monto(solicitud.getMonto())

@@ -5,7 +5,6 @@ import co.com.crediya.jpa.repository.TipoPrestamoJpaRepository;
 import co.com.crediya.model.tipoprestamo.TipoPrestamo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.reactivecommons.utils.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -23,7 +22,7 @@ class TipoPrestamoRepositoryAdapterTest {
     @BeforeEach
     void setUp() {
         repository = mock(TipoPrestamoJpaRepository.class);
-        adapter = new TipoPrestamoRepositoryAdapter(repository, mock(ObjectMapper.class));
+        adapter = new TipoPrestamoRepositoryAdapter(repository);
     }
 
     @Test

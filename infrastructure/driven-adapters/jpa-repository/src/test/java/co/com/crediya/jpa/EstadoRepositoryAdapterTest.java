@@ -4,7 +4,6 @@ import co.com.crediya.jpa.entity.EstadoEntity;
 import co.com.crediya.jpa.repository.EstadoJpaRepository;
 import co.com.crediya.model.estado.Estado;
 import org.junit.jupiter.api.Test;
-import org.reactivecommons.utils.ObjectMapper;
 
 import java.util.Optional;
 
@@ -18,7 +17,7 @@ class EstadoRepositoryAdapterTest {
     @Test
     void encuentraEstadoPorNombre() {
         EstadoJpaRepository repository = mock(EstadoJpaRepository.class);
-        EstadoRepositoryAdapter adapter = new EstadoRepositoryAdapter(repository, mock(ObjectMapper.class));
+        EstadoRepositoryAdapter adapter = new EstadoRepositoryAdapter(repository);
         when(repository.findByNombre(Estado.PENDIENTE_REVISION)).thenReturn(Optional.of(
                 EstadoEntity.builder().idEstado(1L).nombre(Estado.PENDIENTE_REVISION).descripcion("Inicial").build()));
 

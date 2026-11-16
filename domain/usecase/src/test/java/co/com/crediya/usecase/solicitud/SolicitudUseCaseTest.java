@@ -10,7 +10,6 @@ import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.model.tipoprestamo.TipoPrestamo;
 import co.com.crediya.model.tipoprestamo.gateways.TipoPrestamoRepository;
-import co.com.crediya.model.transaction.gateways.TransactionalGateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -32,7 +30,6 @@ class SolicitudUseCaseTest {
     private FakeSolicitudRepository solicitudRepository;
     private FakeTipoPrestamoRepository tipoPrestamoRepository;
     private FakeEstadoRepository estadoRepository;
-    private FakeTransactionalGateway transactionalGateway;
     private SolicitudUseCase useCase;
 
     @BeforeEach
@@ -40,7 +37,6 @@ class SolicitudUseCaseTest {
         solicitudRepository = new FakeSolicitudRepository();
         tipoPrestamoRepository = new FakeTipoPrestamoRepository();
         estadoRepository = new FakeEstadoRepository();
-        transactionalGateway = new FakeTransactionalGateway();
 
         tipoPrestamoRepository.tipos.put(1L, TipoPrestamo.builder()
                 .idTipoPrestamo(1L).nombre("Libre inversión")
@@ -50,7 +46,7 @@ class SolicitudUseCaseTest {
         estadoRepository.estados.put(Estado.PENDIENTE_REVISION,
                 Estado.builder().idEstado(1L).nombre(Estado.PENDIENTE_REVISION).descripcion("Inicial").build());
 
-        useCase = new SolicitudUseCase(solicitudRepository, tipoPrestamoRepository, estadoRepository, transactionalGateway);
+        useCase = new SolicitudUseCase(solicitudRepository, tipoPrestamoRepository, estadoRepository);
     }
 
     private Solicitud.SolicitudBuilder solicitudValida() {
@@ -83,18 +79,11 @@ class SolicitudUseCaseTest {
     }
 
     @Test
-    void ejecutaElRegistroDentroDeUnaTransaccion() {
-        useCase.registrar(solicitudValida().build());
-
-        assertEquals(1, transactionalGateway.ejecuciones);
-    }
-
-    @Test
-    void noAbreTransaccionSiLosDatosSonInvalidos() {
+    void noConsultaNiGuardaSiLosDatosSonInvalidos() {
         Solicitud invalida = solicitudValida().email("correo-invalido").build();
 
         assertThrows(DatosInvalidosException.class, () -> useCase.registrar(invalida));
-        assertEquals(0, transactionalGateway.ejecuciones);
+        assertEquals(0, tipoPrestamoRepository.consultas + estadoRepository.consultas);
         assertTrue(solicitudRepository.guardadas.isEmpty());
     }
 
@@ -142,29 +131,23 @@ class SolicitudUseCaseTest {
 
     private static class FakeTipoPrestamoRepository implements TipoPrestamoRepository {
         private final Map<Long, TipoPrestamo> tipos = new HashMap<>();
+        private int consultas;
 
         @Override
         public Optional<TipoPrestamo> findByIdTipoPrestamo(Long idTipoPrestamo) {
+            consultas++;
             return Optional.ofNullable(tipos.get(idTipoPrestamo));
         }
     }
 
     private static class FakeEstadoRepository implements EstadoRepository {
         private final Map<String, Estado> estados = new HashMap<>();
+        private int consultas;
 
         @Override
         public Optional<Estado> findByNombre(String nombre) {
+            consultas++;
             return Optional.ofNullable(estados.get(nombre));
-        }
-    }
-
-    private static class FakeTransactionalGateway implements TransactionalGateway {
-        private int ejecuciones;
-
-        @Override
-        public <T> T execute(Supplier<T> operation) {
-            ejecuciones++;
-            return operation.get();
         }
     }
 }
