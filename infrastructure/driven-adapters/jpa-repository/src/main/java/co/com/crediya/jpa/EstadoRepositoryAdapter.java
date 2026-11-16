@@ -1,37 +1,25 @@
 package co.com.crediya.jpa;
 
 import co.com.crediya.jpa.entity.EstadoEntity;
-import co.com.crediya.jpa.helper.AdapterOperations;
 import co.com.crediya.jpa.repository.EstadoJpaRepository;
 import co.com.crediya.model.estado.Estado;
 import co.com.crediya.model.estado.gateways.EstadoRepository;
-import org.reactivecommons.utils.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
 @Repository
-public class EstadoRepositoryAdapter extends AdapterOperations<Estado, EstadoEntity, Long, EstadoJpaRepository>
-        implements EstadoRepository {
+@RequiredArgsConstructor
+public class EstadoRepositoryAdapter implements EstadoRepository {
 
-    public EstadoRepositoryAdapter(EstadoJpaRepository repository, ObjectMapper mapper) {
-        super(repository, mapper, EstadoRepositoryAdapter::toDomain);
-    }
+    private final EstadoJpaRepository repository;
 
     @Override
     @Transactional(readOnly = true)
     public Optional<Estado> findByNombre(String nombre) {
-        return repository.findByNombre(nombre).map(this::toEntity);
-    }
-
-    @Override
-    protected EstadoEntity toData(Estado estado) {
-        return EstadoEntity.builder()
-                .idEstado(estado.getIdEstado())
-                .nombre(estado.getNombre())
-                .descripcion(estado.getDescripcion())
-                .build();
+        return repository.findByNombre(nombre).map(EstadoRepositoryAdapter::toDomain);
     }
 
     private static Estado toDomain(EstadoEntity entity) {

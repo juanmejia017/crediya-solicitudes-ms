@@ -6,7 +6,6 @@ import co.com.crediya.model.solicitud.Solicitud;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.reactivecommons.utils.ObjectMapper;
 
 import java.math.BigDecimal;
 
@@ -25,7 +24,7 @@ class SolicitudRepositoryAdapterTest {
     @BeforeEach
     void setUp() {
         repository = mock(SolicitudJpaRepository.class);
-        adapter = new SolicitudRepositoryAdapter(repository, mock(ObjectMapper.class));
+        adapter = new SolicitudRepositoryAdapter(repository);
     }
 
     @Test
