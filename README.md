@@ -9,9 +9,9 @@ Sigue la misma estructura y convenciones que el microservicio de autenticación
 
 | Módulo | Contenido |
 |---|---|
-| `domain/model` | Modelos `Solicitud`, `TipoPrestamo`, `Estado`, sus gateways, `TransactionalGateway` y excepciones de negocio |
-| `domain/usecase` | `SolicitudUseCase`: valida, verifica el tipo de préstamo, asigna el estado inicial y guarda en una sola transacción |
-| `infrastructure/driven-adapters/jpa-repository` | Entidades JPA, repositorios, adaptadores, `TransactionalAdapter` (`TransactionTemplate`) y carga de datos iniciales |
+| `domain/model` | Modelos `Solicitud`, `TipoPrestamo`, `Estado`, sus gateways y excepciones de negocio |
+| `domain/usecase` | `SolicitudUseCase`: valida, verifica el tipo de préstamo, asigna el estado inicial y guarda la solicitud |
+| `infrastructure/driven-adapters/jpa-repository` | Entidades JPA, repositorios, adaptadores (con `@Transactional`) y carga de datos iniciales |
 | `infrastructure/entry-points/api-rest` | `ApiRest` (`@RestController`), filtro de traza `X-Trace-Id` y `GlobalExceptionHandler` |
 | `applications/app-service` | Arranque de la aplicación y configuración |
 

@@ -9,7 +9,6 @@ import co.com.crediya.model.solicitud.SolicitudValidator;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.model.tipoprestamo.TipoPrestamo;
 import co.com.crediya.model.tipoprestamo.gateways.TipoPrestamoRepository;
-import co.com.crediya.model.transaction.gateways.TransactionalGateway;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -18,19 +17,14 @@ public class SolicitudUseCase {
     private final SolicitudRepository solicitudRepository;
     private final TipoPrestamoRepository tipoPrestamoRepository;
     private final EstadoRepository estadoRepository;
-    private final TransactionalGateway transactionalGateway;
 
     public Solicitud registrar(Solicitud solicitud) {
         SolicitudValidator.validar(solicitud);
         Solicitud normalizada = solicitud.normalizada();
-        return transactionalGateway.execute(() -> registrarEnTransaccion(normalizada));
-    }
-
-    private Solicitud registrarEnTransaccion(Solicitud solicitud) {
-        TipoPrestamo tipo = buscarTipoPrestamo(solicitud.getIdTipoPrestamo());
-        tipo.validarMonto(solicitud.getMonto());
+        TipoPrestamo tipo = buscarTipoPrestamo(normalizada.getIdTipoPrestamo());
+        tipo.validarMonto(normalizada.getMonto());
         Estado estadoInicial = buscarEstadoInicial();
-        Solicitud guardada = solicitudRepository.save(solicitud.conEstado(estadoInicial));
+        Solicitud guardada = solicitudRepository.save(normalizada.conEstado(estadoInicial));
         return guardada.conDescripciones(estadoInicial, tipo);
     }
 
