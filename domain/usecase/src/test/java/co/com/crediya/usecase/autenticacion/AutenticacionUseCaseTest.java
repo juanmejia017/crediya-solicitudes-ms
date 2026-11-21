@@ -20,17 +20,17 @@ class AutenticacionUseCaseTest {
 
     @Test
     void devuelveElUsuarioDelToken() {
-        assertEquals(CLIENTE, useCase.validarToken("Bearer valido"));
+        assertEquals(CLIENTE, useCase.validarToken("valido"));
     }
 
     @Test
-    void rechazaHeaderAusenteOSinBearer() {
+    void rechazaTokenAusenteOVacio() {
         assertThrows(NoAutenticadoException.class, () -> useCase.validarToken(null));
-        assertThrows(NoAutenticadoException.class, () -> useCase.validarToken("valido"));
+        assertThrows(NoAutenticadoException.class, () -> useCase.validarToken(" "));
     }
 
     @Test
     void rechazaTokenInvalido() {
-        assertThrows(NoAutenticadoException.class, () -> useCase.validarToken("Bearer otro"));
+        assertThrows(NoAutenticadoException.class, () -> useCase.validarToken("otro"));
     }
 }
