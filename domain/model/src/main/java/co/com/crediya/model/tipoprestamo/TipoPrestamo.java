@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
-import co.com.crediya.model.exceptions.MontoFueraDeRangoException;
 
 import java.math.BigDecimal;
 
@@ -24,9 +23,10 @@ public class TipoPrestamo {
     /**
      * Regla del tipo de préstamo: el monto solicitado debe estar entre su mínimo y su máximo.
      */
-    public void validarMonto(BigDecimal monto) {
-        if (monto.compareTo(montoMinimo) < 0 || monto.compareTo(montoMaximo) > 0) {
-            throw new MontoFueraDeRangoException(nombre, montoMinimo, montoMaximo);
-        }
+    /**
+     * Regla: el monto debe estar entre el mínimo y el máximo de este tipo, incluidos los límites.
+     */
+    public boolean permiteMonto(BigDecimal monto) {
+        return monto.compareTo(montoMinimo) >= 0 && monto.compareTo(montoMaximo) <= 0;
     }
 }
