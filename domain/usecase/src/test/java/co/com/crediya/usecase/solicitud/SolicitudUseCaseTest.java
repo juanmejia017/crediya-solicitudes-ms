@@ -1,11 +1,14 @@
 package co.com.crediya.usecase.solicitud;
 
+import co.com.crediya.model.auth.UsuarioAutenticado;
 import co.com.crediya.model.estado.Estado;
 import co.com.crediya.model.estado.gateways.EstadoRepository;
+import co.com.crediya.model.exceptions.AccesoDenegadoException;
 import co.com.crediya.model.exceptions.DatosInvalidosException;
 import co.com.crediya.model.exceptions.MontoFueraDeRangoException;
 import co.com.crediya.model.exceptions.TechnicalException;
 import co.com.crediya.model.exceptions.TipoPrestamoNoExisteException;
+import co.com.crediya.model.rol.Rol;
 import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.model.tipoprestamo.TipoPrestamo;
@@ -26,6 +29,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SolicitudUseCaseTest {
+
+    private static final UsuarioAutenticado CLIENTE =
+            new UsuarioAutenticado(7L, "juan@correo.com", "1020304050", Rol.CLIENTE);
 
     private FakeSolicitudRepository solicitudRepository;
     private FakeTipoPrestamoRepository tipoPrestamoRepository;
@@ -60,7 +66,7 @@ class SolicitudUseCaseTest {
 
     @Test
     void registraSolicitudConEstadoPendienteDeRevision() {
-        Solicitud creada = useCase.registrar(solicitudValida().build());
+        Solicitud creada = useCase.registrar(solicitudValida().build(), CLIENTE);
 
         assertEquals(1L, creada.getIdSolicitud());
         assertEquals(1L, creada.getIdEstado());
@@ -72,7 +78,7 @@ class SolicitudUseCaseTest {
 
     @Test
     void ignoraEstadoEnviadoPorElClienteYUsaElInicial() {
-        Solicitud creada = useCase.registrar(solicitudValida().idEstado(99L).idSolicitud(50L).build());
+        Solicitud creada = useCase.registrar(solicitudValida().idEstado(99L).idSolicitud(50L).build(), CLIENTE);
 
         assertEquals(1L, creada.getIdEstado());
         assertEquals(1L, creada.getIdSolicitud());
@@ -82,7 +88,7 @@ class SolicitudUseCaseTest {
     void noConsultaNiGuardaSiLosDatosSonInvalidos() {
         Solicitud invalida = solicitudValida().email("correo-invalido").build();
 
-        assertThrows(DatosInvalidosException.class, () -> useCase.registrar(invalida));
+        assertThrows(DatosInvalidosException.class, () -> useCase.registrar(invalida, CLIENTE));
         assertEquals(0, tipoPrestamoRepository.consultas + estadoRepository.consultas);
         assertTrue(solicitudRepository.guardadas.isEmpty());
     }
@@ -91,7 +97,7 @@ class SolicitudUseCaseTest {
     void rechazaTipoDePrestamoInexistente() {
         Solicitud solicitud = solicitudValida().idTipoPrestamo(77L).build();
 
-        assertThrows(TipoPrestamoNoExisteException.class, () -> useCase.registrar(solicitud));
+        assertThrows(TipoPrestamoNoExisteException.class, () -> useCase.registrar(solicitud, CLIENTE));
         assertTrue(solicitudRepository.guardadas.isEmpty());
     }
 
@@ -99,7 +105,7 @@ class SolicitudUseCaseTest {
     void rechazaMontoFueraDelRangoDelTipo() {
         Solicitud solicitud = solicitudValida().monto(new BigDecimal("900000000")).build();
 
-        assertThrows(MontoFueraDeRangoException.class, () -> useCase.registrar(solicitud));
+        assertThrows(MontoFueraDeRangoException.class, () -> useCase.registrar(solicitud, CLIENTE));
         assertTrue(solicitudRepository.guardadas.isEmpty());
     }
 
@@ -108,15 +114,58 @@ class SolicitudUseCaseTest {
         estadoRepository.estados.clear();
         Solicitud solicitud = solicitudValida().build();
 
-        assertThrows(TechnicalException.class, () -> useCase.registrar(solicitud));
+        assertThrows(TechnicalException.class, () -> useCase.registrar(solicitud, CLIENTE));
         assertTrue(solicitudRepository.guardadas.isEmpty());
     }
 
     @Test
     void noGuardaDatosDeLecturaComoEstadoOTipo() {
-        useCase.registrar(solicitudValida().estado("Aprobada").build());
+        useCase.registrar(solicitudValida().estado("Aprobada").build(), CLIENTE);
 
         assertNull(solicitudRepository.guardadas.get(0).getEstado());
+    }
+
+    @Test
+    void soloUnClientePuedeCrearSolicitudes() {
+        UsuarioAutenticado asesor = new UsuarioAutenticado(2L, "juan@correo.com", "1020304050", Rol.ASESOR);
+        UsuarioAutenticado admin = new UsuarioAutenticado(1L, "juan@correo.com", null, Rol.ADMIN);
+
+        assertThrows(AccesoDenegadoException.class, () -> useCase.registrar(solicitudValida().build(), asesor));
+        assertThrows(AccesoDenegadoException.class, () -> useCase.registrar(solicitudValida().build(), admin));
+        assertThrows(AccesoDenegadoException.class, () -> useCase.registrar(solicitudValida().build(), null));
+        assertEquals(0, tipoPrestamoRepository.consultas + estadoRepository.consultas);
+        assertTrue(solicitudRepository.guardadas.isEmpty());
+    }
+
+    @Test
+    void elClienteNoPuedeCrearSolicitudesConElEmailDeOtro() {
+        Solicitud deOtro = solicitudValida().email("otra.persona@correo.com").build();
+
+        assertThrows(AccesoDenegadoException.class, () -> useCase.registrar(deOtro, CLIENTE));
+        assertEquals(0, tipoPrestamoRepository.consultas);
+        assertTrue(solicitudRepository.guardadas.isEmpty());
+    }
+
+    @Test
+    void elClienteNoPuedeCrearSolicitudesConElDocumentoDeOtro() {
+        Solicitud deOtro = solicitudValida().documentoIdentidad("9988776655").build();
+
+        assertThrows(AccesoDenegadoException.class, () -> useCase.registrar(deOtro, CLIENTE));
+        assertTrue(solicitudRepository.guardadas.isEmpty());
+    }
+
+    @Test
+    void comparaElEmailSinImportarMayusculasNiEspacios() {
+        UsuarioAutenticado cliente = new UsuarioAutenticado(7L, "Juan@Correo.com", "1020304050", Rol.CLIENTE);
+
+        assertEquals(1L, useCase.registrar(solicitudValida().email("  JUAN@correo.COM ").build(), cliente).getIdSolicitud());
+    }
+
+    @Test
+    void siElClienteNoTieneDocumentoRegistradoSoloSeComparaElEmail() {
+        UsuarioAutenticado sinDocumento = new UsuarioAutenticado(7L, "juan@correo.com", null, Rol.CLIENTE);
+
+        assertEquals(1L, useCase.registrar(solicitudValida().build(), sinDocumento).getIdSolicitud());
     }
 
     private static class FakeSolicitudRepository implements SolicitudRepository {

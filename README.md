@@ -27,6 +27,7 @@ y los tipos de préstamo iniciales. La tabla `solicitud` guarda además `documen
 cd C:\Users\juanm\crediya-solicitudes-ms
 $env:DB_USERNAME="crediya"
 $env:DB_PASSWORD="crediya"
+$env:JWT_SECRET="cambia-este-secreto-por-uno-largo-de-32-o-mas"   # el MISMO de crediya-autenticacion-ms
 
 docker compose up -d
 .\gradlew.bat clean build
@@ -37,6 +38,7 @@ docker compose up -d
 |---|---|---|
 | `DB_URL` | URL JDBC de PostgreSQL | `jdbc:postgresql://localhost:5433/crediya_solicitudes_db` |
 | `DB_USERNAME` / `DB_PASSWORD` | Credenciales | *(obligatorias)* |
+| `JWT_SECRET` | Secreto para validar los tokens (mínimo 32 caracteres). **Debe ser el mismo de `crediya-autenticacion-ms`** | *(obligatoria)* |
 
 La base de datos de este microservicio corre en el contenedor `crediya-solicitudes-postgres`, puerto **5433**,
 para no chocar con la de autenticación (5432).
@@ -45,7 +47,19 @@ El servicio queda en `http://localhost:8081`.
 
 ## Endpoint
 
-### `POST /api/v1/solicitud` — HU 2: Registrar una solicitud de préstamo
+### `POST /api/v1/solicitud` — HU 2: Registrar una solicitud de préstamo (protegido desde la HU 3)
+
+Requiere el header `Authorization: Bearer <token>` obtenido en `POST /api/v1/login` de
+`crediya-autenticacion-ms` (puerto 8080). Solo un usuario con rol **CLIENTE** puede crear solicitudes, y solo a su
+nombre: el `email` (y el `documentoIdentidad`, si el cliente lo tiene registrado) deben ser los del usuario del token.
+
+Este microservicio no genera tokens: solo verifica la firma con el mismo `JWT_SECRET`, el emisor, el vencimiento y el rol.
+
+```
+ApiRest → AutenticacionUseCase.validarToken → TokenGateway.validar (JwtTokenAdapter)
+        → SolicitudUseCase.registrar (es cliente → validar → normalizar → es su propia solicitud
+          → tipo → monto → estado → save) → ApiRest (201)
+```
 
 ```json
 {
@@ -67,6 +81,8 @@ Reglas:
 |---|---|
 | 201 | Solicitud registrada (header `Location` con la URL del recurso) |
 | 400 | Datos inválidos, cuerpo vacío o JSON mal formado |
+| 401 | Sin token, token inválido o vencido (`NO_AUTENTICADO`) |
+| 403 | El usuario no es cliente, o el email/documento no son los suyos (`ACCESO_DENEGADO`) |
 | 415 | El `Content-Type` no es `application/json` |
 | 422 | El tipo de préstamo no existe o el monto está fuera de su rango |
 | 500 | Error inesperado (mensaje genérico, el detalle solo queda en el log) |

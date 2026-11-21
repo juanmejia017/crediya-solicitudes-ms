@@ -1,12 +1,15 @@
 package co.com.crediya.api.exception;
 
 import co.com.crediya.api.dto.ErrorResponse;
+import co.com.crediya.model.exceptions.AccesoDenegadoException;
 import co.com.crediya.model.exceptions.BusinessException;
 import co.com.crediya.model.exceptions.DatosInvalidosException;
 import co.com.crediya.model.exceptions.MontoFueraDeRangoException;
+import co.com.crediya.model.exceptions.NoAutenticadoException;
 import co.com.crediya.model.exceptions.TechnicalException;
 import co.com.crediya.model.exceptions.TipoPrestamoNoExisteException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -32,6 +35,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleReglaPrestamo(BusinessException ex) {
         log.warn("Regla de negocio [{}]: {}", ex.getCodigo(), ex.getMessage());
         return build(HttpStatus.UNPROCESSABLE_CONTENT, ex.getCodigo(), ex.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(NoAutenticadoException.class)
+    public ResponseEntity<ErrorResponse> handleNoAutenticado(NoAutenticadoException ex) {
+        log.warn("Petición sin autenticación válida: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
+                .body(ErrorResponse.of(HttpStatus.UNAUTHORIZED.value(), ex.getCodigo(), ex.getMessage(), List.of()));
+    }
+
+    @ExceptionHandler(AccesoDenegadoException.class)
+    public ResponseEntity<ErrorResponse> handleAccesoDenegado(AccesoDenegadoException ex) {
+        log.warn("Acceso denegado: {}", ex.getMessage());
+        return build(HttpStatus.FORBIDDEN, ex.getCodigo(), ex.getMessage(), List.of());
     }
 
     @ExceptionHandler(BusinessException.class)
