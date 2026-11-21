@@ -11,7 +11,7 @@ public record RegistrarSolicitudRequest(
         String documentoIdentidad,
         Long idTipoPrestamo
 ) {
-    public Solicitud toDomain() {
+    public Solicitud aDominio() {
         return Solicitud.builder()
                 .monto(monto)
                 .plazo(plazo)

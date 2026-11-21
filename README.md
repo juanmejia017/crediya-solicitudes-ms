@@ -56,9 +56,11 @@ nombre: el `email` (y el `documentoIdentidad`, si el cliente lo tiene registrado
 Este microservicio no genera tokens: solo verifica la firma con el mismo `JWT_SECRET`, el emisor, el vencimiento y el rol.
 
 ```
-ApiRest → AutenticacionUseCase.validarToken → TokenGateway.validar (JwtTokenAdapter)
-        → SolicitudUseCase.registrar (es cliente → validar → normalizar → es su propia solicitud
-          → tipo → monto → estado → save) → ApiRest (201)
+ApiRest.registrarSolicitudPrestamo
+        → ValidadorPeticion.validarPeticionAutenticada (token con AutenticacionUseCase.validarToken + cuerpo)
+        → SolicitudUseCase.registrarSolicitudPrestamo (es cliente → validar → normalizar → es su propia solicitud
+          → tipo → monto → estado → guardar)
+        → SolicitudRepositoryAdapter (INSERT, SolicitudEntityMapper) → ApiRest (201)
 ```
 
 ```json
@@ -76,6 +78,15 @@ Reglas:
   `documentoIdentidad` de 5 a 20 caracteres alfanuméricos.
 - `idTipoPrestamo` debe existir y el `monto` debe estar entre el mínimo y el máximo de ese tipo.
 - La solicitud se registra siempre con el estado **"Pendiente de revisión"** (se ignora cualquier estado enviado).
+
+Organización del código:
+- **ApiRest:** solo recibe la petición HTTP, la delega y arma la respuesta.
+- **ValidadorPeticion** (`api/validacion`): valida el token y que el cuerpo no venga vacío, antes del caso de uso.
+- **Adapters:** solo persisten o consultan; la conversión dominio ↔ entidad está en `jpa/mapper`
+  (`SolicitudEntityMapper`, `TipoPrestamoEntityMapper`, `EstadoEntityMapper`).
+- **Nombres de métodos en español.** Se mantienen en inglés solo los que exige el framework: los métodos derivados de
+  Spring Data (`findBy…`, `existsBy…`, `save`, `findById`), los `@Override` de Spring (`run`, `doFilter`) y los beans
+  `entityManagerFactory` y `transactionManager`.
 
 | Código | Cuándo |
 |---|---|

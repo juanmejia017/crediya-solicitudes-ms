@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class UseCasesConfigTest {
 
     @Test
-    void testUseCaseBeansExist() {
+    void registraLosCasosDeUsoComoBeans() {
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(TestConfig.class)) {
             String[] beanNames = context.getBeanDefinitionNames();
 
@@ -33,14 +33,14 @@ class UseCasesConfigTest {
     static class TestConfig {
 
         @Bean
-        public MyUseCase myUseCase() {
-            return new MyUseCase();
+        public PruebaUseCase pruebaUseCase() {
+            return new PruebaUseCase();
         }
     }
 
-    static class MyUseCase {
-        public String execute() {
-            return "MyUseCase Test";
+    static class PruebaUseCase {
+        public String ejecutar() {
+            return "PruebaUseCase Test";
         }
     }
 }

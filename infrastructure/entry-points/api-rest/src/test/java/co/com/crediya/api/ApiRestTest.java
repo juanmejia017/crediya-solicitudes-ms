@@ -23,6 +23,7 @@ import org.springframework.web.context.WebApplicationContext;
 import java.math.BigDecimal;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -72,7 +73,7 @@ class ApiRestTest {
                 .idTipoPrestamo(1L).tipoPrestamo("Libre inversión")
                 .idEstado(1L).estado("Pendiente de revisión")
                 .build();
-        when(solicitudUseCase.registrar(any(), eq(CLIENTE))).thenReturn(creada);
+        when(solicitudUseCase.registrarSolicitudPrestamo(any(), eq(CLIENTE))).thenReturn(creada);
 
         client.post().uri(PATH)
                 .header("Authorization", TOKEN)
@@ -80,7 +81,7 @@ class ApiRestTest {
                 .body(BODY)
                 .exchange()
                 .expectStatus().isCreated()
-                .expectHeader().location(PATH + "/1")
+                .expectHeader().value("Location", ubicacion -> assertTrue(ubicacion.endsWith(PATH + "/1")))
                 .expectBody()
                 .jsonPath("$.idSolicitud").isEqualTo(1)
                 .jsonPath("$.estado").isEqualTo("Pendiente de revisión")
@@ -89,7 +90,7 @@ class ApiRestTest {
 
     @Test
     void retorna400SiLosDatosSonInvalidos() {
-        when(solicitudUseCase.registrar(any(), eq(CLIENTE)))
+        when(solicitudUseCase.registrarSolicitudPrestamo(any(), eq(CLIENTE)))
                 .thenThrow(new DatosInvalidosException(List.of("El campo monto es obligatorio")));
 
         client.post().uri(PATH)
@@ -126,7 +127,7 @@ class ApiRestTest {
 
     @Test
     void retorna422SiElTipoDePrestamoNoExiste() {
-        when(solicitudUseCase.registrar(any(), eq(CLIENTE))).thenThrow(new TipoPrestamoNoExisteException(99L));
+        when(solicitudUseCase.registrarSolicitudPrestamo(any(), eq(CLIENTE))).thenThrow(new TipoPrestamoNoExisteException(99L));
 
         client.post().uri(PATH)
                 .header("Authorization", TOKEN)
@@ -140,7 +141,7 @@ class ApiRestTest {
 
     @Test
     void retorna422SiElMontoEstaFueraDeRango() {
-        when(solicitudUseCase.registrar(any(), eq(CLIENTE)))
+        when(solicitudUseCase.registrarSolicitudPrestamo(any(), eq(CLIENTE)))
                 .thenThrow(new MontoFueraDeRangoException("Libre inversión", BigDecimal.ONE, BigDecimal.TEN));
 
         client.post().uri(PATH)
@@ -167,7 +168,7 @@ class ApiRestTest {
 
     @Test
     void retorna500GenericoSiHayErrorTecnico() {
-        when(solicitudUseCase.registrar(any(), eq(CLIENTE)))
+        when(solicitudUseCase.registrarSolicitudPrestamo(any(), eq(CLIENTE)))
                 .thenThrow(new TechnicalException("ESTADO_INICIAL_NO_CONFIGURADO", "detalle interno"));
 
         client.post().uri(PATH)
@@ -182,7 +183,7 @@ class ApiRestTest {
 
     @Test
     void retorna500GenericoSinExponerElDetalleDelError() {
-        when(solicitudUseCase.registrar(any(), eq(CLIENTE))).thenThrow(new IllegalStateException("password=secreto"));
+        when(solicitudUseCase.registrarSolicitudPrestamo(any(), eq(CLIENTE))).thenThrow(new IllegalStateException("password=secreto"));
 
         client.post().uri(PATH)
                 .header("Authorization", TOKEN)
@@ -207,12 +208,12 @@ class ApiRestTest {
                 .expectBody()
                 .jsonPath("$.codigo").isEqualTo("NO_AUTENTICADO");
 
-        verify(solicitudUseCase, never()).registrar(any(), any());
+        verify(solicitudUseCase, never()).registrarSolicitudPrestamo(any(), any());
     }
 
     @Test
     void retorna403SiNoEsClienteOLaSolicitudEsDeOtro() {
-        when(solicitudUseCase.registrar(any(), eq(CLIENTE)))
+        when(solicitudUseCase.registrarSolicitudPrestamo(any(), eq(CLIENTE)))
                 .thenThrow(new AccesoDenegadoException("Solo puedes crear solicitudes de préstamo a tu nombre"));
 
         client.post().uri(PATH)

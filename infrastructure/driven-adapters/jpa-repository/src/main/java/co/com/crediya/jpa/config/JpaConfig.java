@@ -22,7 +22,7 @@ import java.util.Properties;
 public class JpaConfig {
 
     @Bean
-    public DBSecret dbSecret(Environment env) {
+    public DBSecret secretoBaseDatos(Environment env) {
         return DBSecret.builder()
                 .url(env.getProperty("spring.datasource.url"))
                 .username(env.getProperty("spring.datasource.username"))
@@ -31,7 +31,7 @@ public class JpaConfig {
     }
 
     @Bean
-    public DataSource datasource(DBSecret secret, @Value("${spring.datasource.driverClassName}") String driverClass) {
+    public DataSource fuenteDatos(DBSecret secret, @Value("${spring.datasource.driverClassName}") String driverClass) {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(secret.getUrl());
         config.setUsername(secret.getUsername());

@@ -1,6 +1,6 @@
 package co.com.crediya.jpa;
 
-import co.com.crediya.jpa.entity.SolicitudEntity;
+import co.com.crediya.jpa.mapper.SolicitudEntityMapper;
 import co.com.crediya.jpa.repository.SolicitudJpaRepository;
 import co.com.crediya.model.solicitud.Solicitud;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
@@ -9,6 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Persistencia de solicitudes: guarda en la tabla solicitud.
+ * La conversión entre Solicitud y SolicitudEntity la hace SolicitudEntityMapper.
+ */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
@@ -18,35 +22,10 @@ public class SolicitudRepositoryAdapter implements SolicitudRepository {
 
     @Override
     @Transactional
-    public Solicitud save(Solicitud solicitud) {
+    public Solicitud guardar(Solicitud solicitud) {
         log.info("Persistiendo nueva solicitud (tipo={})", solicitud.getIdTipoPrestamo());
-        SolicitudEntity entidad = toData(solicitud);
-        Solicitud guardada = toDomain(repository.save(entidad));
+        Solicitud guardada = SolicitudEntityMapper.aDominio(repository.save(SolicitudEntityMapper.aEntidad(solicitud)));
         log.info("Solicitud persistida con id {}", guardada.getIdSolicitud());
         return guardada;
-    }
-
-    private static SolicitudEntity toData(Solicitud solicitud) {
-        return SolicitudEntity.builder()
-                .idSolicitud(solicitud.getIdSolicitud())
-                .monto(solicitud.getMonto())
-                .plazo(solicitud.getPlazo())
-                .email(solicitud.getEmail())
-                .documentoIdentidad(solicitud.getDocumentoIdentidad())
-                .idEstado(solicitud.getIdEstado())
-                .idTipoPrestamo(solicitud.getIdTipoPrestamo())
-                .build();
-    }
-
-    private static Solicitud toDomain(SolicitudEntity entity) {
-        return Solicitud.builder()
-                .idSolicitud(entity.getIdSolicitud())
-                .monto(entity.getMonto())
-                .plazo(entity.getPlazo())
-                .email(entity.getEmail())
-                .documentoIdentidad(entity.getDocumentoIdentidad())
-                .idEstado(entity.getIdEstado())
-                .idTipoPrestamo(entity.getIdTipoPrestamo())
-                .build();
     }
 }

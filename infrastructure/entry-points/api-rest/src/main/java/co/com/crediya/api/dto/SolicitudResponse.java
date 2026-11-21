@@ -15,7 +15,7 @@ public record SolicitudResponse(
         Long idEstado,
         String estado
 ) {
-    public static SolicitudResponse fromDomain(Solicitud solicitud) {
+    public static SolicitudResponse desdeDominio(Solicitud solicitud) {
         return new SolicitudResponse(
                 solicitud.getIdSolicitud(),
                 solicitud.getMonto(),
