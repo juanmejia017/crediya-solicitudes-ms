@@ -1,6 +1,6 @@
 package co.com.crediya.jpa;
 
-import co.com.crediya.jpa.entity.TipoPrestamoEntity;
+import co.com.crediya.jpa.mapper.TipoPrestamoEntityMapper;
 import co.com.crediya.jpa.repository.TipoPrestamoJpaRepository;
 import co.com.crediya.model.tipoprestamo.TipoPrestamo;
 import co.com.crediya.model.tipoprestamo.gateways.TipoPrestamoRepository;
@@ -11,6 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+/**
+ * Consulta de tipos de préstamo en la tabla tipo_prestamo.
+ * La conversión a TipoPrestamo la hace TipoPrestamoEntityMapper.
+ */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
@@ -20,22 +24,11 @@ public class TipoPrestamoRepositoryAdapter implements TipoPrestamoRepository {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<TipoPrestamo> findByIdTipoPrestamo(Long idTipoPrestamo) {
-        Optional<TipoPrestamo> tipo = repository.findById(idTipoPrestamo).map(TipoPrestamoRepositoryAdapter::toDomain);
+    public Optional<TipoPrestamo> buscarPorId(Long idTipoPrestamo) {
+        Optional<TipoPrestamo> tipo = repository.findById(idTipoPrestamo).map(TipoPrestamoEntityMapper::aDominio);
         if (tipo.isEmpty()) {
             log.warn("Tipo de préstamo {} no encontrado", idTipoPrestamo);
         }
         return tipo;
-    }
-
-    private static TipoPrestamo toDomain(TipoPrestamoEntity entity) {
-        return TipoPrestamo.builder()
-                .idTipoPrestamo(entity.getIdTipoPrestamo())
-                .nombre(entity.getNombre())
-                .montoMinimo(entity.getMontoMinimo())
-                .montoMaximo(entity.getMontoMaximo())
-                .tasaInteres(entity.getTasaInteres())
-                .validacionAutomatica(entity.getValidacionAutomatica())
-                .build();
     }
 }

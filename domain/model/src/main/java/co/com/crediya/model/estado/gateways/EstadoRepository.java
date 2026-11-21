@@ -5,5 +5,5 @@ import co.com.crediya.model.estado.Estado;
 import java.util.Optional;
 
 public interface EstadoRepository {
-    Optional<Estado> findByNombre(String nombre);
+    Optional<Estado> buscarPorNombre(String nombre);
 }

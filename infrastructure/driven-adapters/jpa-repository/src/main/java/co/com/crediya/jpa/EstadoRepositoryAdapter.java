@@ -1,6 +1,6 @@
 package co.com.crediya.jpa;
 
-import co.com.crediya.jpa.entity.EstadoEntity;
+import co.com.crediya.jpa.mapper.EstadoEntityMapper;
 import co.com.crediya.jpa.repository.EstadoJpaRepository;
 import co.com.crediya.model.estado.Estado;
 import co.com.crediya.model.estado.gateways.EstadoRepository;
@@ -10,6 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+/**
+ * Consulta de estados en la tabla estados.
+ * La conversión a Estado la hace EstadoEntityMapper.
+ */
 @Repository
 @RequiredArgsConstructor
 public class EstadoRepositoryAdapter implements EstadoRepository {
@@ -18,15 +22,7 @@ public class EstadoRepositoryAdapter implements EstadoRepository {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Estado> findByNombre(String nombre) {
-        return repository.findByNombre(nombre).map(EstadoRepositoryAdapter::toDomain);
-    }
-
-    private static Estado toDomain(EstadoEntity entity) {
-        return Estado.builder()
-                .idEstado(entity.getIdEstado())
-                .nombre(entity.getNombre())
-                .descripcion(entity.getDescripcion())
-                .build();
+    public Optional<Estado> buscarPorNombre(String nombre) {
+        return repository.findByNombre(nombre).map(EstadoEntityMapper::aDominio);
     }
 }

@@ -29,7 +29,7 @@ class SecurityHeadersFilterTest {
     }
 
     @Test
-    void testDoFilter() throws IOException, ServletException {
+    void agregaLosHeadersDeSeguridad() throws IOException, ServletException {
         filter.doFilter(request, response, chain);
 
         assertEquals("default-src 'self'; frame-ancestors 'self'; form-action 'self'", response.getHeader("Content-Security-Policy"));

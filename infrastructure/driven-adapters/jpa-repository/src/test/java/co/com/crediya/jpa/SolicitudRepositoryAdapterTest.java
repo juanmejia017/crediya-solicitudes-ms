@@ -43,7 +43,7 @@ class SolicitudRepositoryAdapterTest {
                     .build();
         });
 
-        Solicitud guardada = adapter.save(solicitud);
+        Solicitud guardada = adapter.guardar(solicitud);
 
         assertEquals(10L, guardada.getIdSolicitud());
         assertEquals(1L, guardada.getIdEstado());

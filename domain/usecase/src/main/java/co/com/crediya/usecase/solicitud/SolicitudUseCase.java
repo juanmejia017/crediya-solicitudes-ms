@@ -26,7 +26,7 @@ public class SolicitudUseCase {
     /**
      * Registra una solicitud. Solo la puede crear un cliente que inició sesión, y solo a su nombre.
      */
-    public Solicitud registrar(Solicitud solicitud, UsuarioAutenticado solicitante) {
+    public Solicitud registrarSolicitudPrestamo(Solicitud solicitud, UsuarioAutenticado solicitante) {
         validarQueSeaCliente(solicitante);
         SolicitudValidator.validar(solicitud);
         Solicitud normalizada = solicitud.normalizada();
@@ -34,7 +34,7 @@ public class SolicitudUseCase {
         TipoPrestamo tipo = buscarTipoPrestamo(normalizada.getIdTipoPrestamo());
         tipo.validarMonto(normalizada.getMonto());
         Estado estadoInicial = buscarEstadoInicial();
-        Solicitud guardada = solicitudRepository.save(normalizada.conEstado(estadoInicial));
+        Solicitud guardada = solicitudRepository.guardar(normalizada.conEstado(estadoInicial));
         return guardada.conDescripciones(estadoInicial, tipo);
     }
 
@@ -60,12 +60,12 @@ public class SolicitudUseCase {
     }
 
     private TipoPrestamo buscarTipoPrestamo(Long idTipoPrestamo) {
-        return tipoPrestamoRepository.findByIdTipoPrestamo(idTipoPrestamo)
+        return tipoPrestamoRepository.buscarPorId(idTipoPrestamo)
                 .orElseThrow(() -> new TipoPrestamoNoExisteException(idTipoPrestamo));
     }
 
     private Estado buscarEstadoInicial() {
-        return estadoRepository.findByNombre(Estado.PENDIENTE_REVISION)
+        return estadoRepository.buscarPorNombre(Estado.PENDIENTE_REVISION)
                 .orElseThrow(() -> new TechnicalException("ESTADO_INICIAL_NO_CONFIGURADO",
                         "No existe el estado '" + Estado.PENDIENTE_REVISION + "' en la base de datos"));
     }

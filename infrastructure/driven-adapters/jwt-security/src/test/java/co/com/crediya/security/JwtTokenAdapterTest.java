@@ -27,7 +27,7 @@ class JwtTokenAdapterTest {
             new JwtTokenAdapter(SECRETO, Clock.fixed(Instant.ofEpochSecond(AHORA), ZoneOffset.UTC));
 
     /** Arma un token igual al que genera crediya-autenticacion-ms. */
-    private static String token(String header, String payload, String secreto) throws Exception {
+    private static String armarToken(String header, String payload, String secreto) throws Exception {
         Base64.Encoder b64 = Base64.getUrlEncoder().withoutPadding();
         String contenido = b64.encodeToString(header.getBytes(StandardCharsets.UTF_8)) + "."
                 + b64.encodeToString(payload.getBytes(StandardCharsets.UTF_8));
@@ -36,14 +36,14 @@ class JwtTokenAdapterTest {
         return contenido + "." + b64.encodeToString(mac.doFinal(contenido.getBytes(StandardCharsets.UTF_8)));
     }
 
-    private static String payload(String emisor, String rol, long exp) {
+    private static String armarContenido(String emisor, String rol, long exp) {
         return "{\"iss\":\"" + emisor + "\",\"sub\":\"ana@correo.com\",\"idUsuario\":7,\"documento\":\"1020304050\","
                 + "\"rol\":\"" + rol + "\",\"iat\":" + (AHORA - 60) + ",\"exp\":" + exp + "}";
     }
 
     @Test
     void aceptaUnTokenValidoDeAutenticacion() throws Exception {
-        String token = token(HEADER, payload("crediya-autenticacion-ms", "CLIENTE", AHORA + 3600), SECRETO);
+        String token = armarToken(HEADER, armarContenido("crediya-autenticacion-ms", "CLIENTE", AHORA + 3600), SECRETO);
 
         assertEquals(Optional.of(new UsuarioAutenticado(7L, "ana@correo.com", "1020304050", Rol.CLIENTE)),
                 adapter.validar(token));
@@ -51,12 +51,12 @@ class JwtTokenAdapterTest {
 
     @Test
     void rechazaTokenExpirado() throws Exception {
-        assertTrue(adapter.validar(token(HEADER, payload("crediya-autenticacion-ms", "CLIENTE", AHORA), SECRETO)).isEmpty());
+        assertTrue(adapter.validar(armarToken(HEADER, armarContenido("crediya-autenticacion-ms", "CLIENTE", AHORA), SECRETO)).isEmpty());
     }
 
     @Test
     void rechazaOtroSecreto() throws Exception {
-        String token = token(HEADER, payload("crediya-autenticacion-ms", "CLIENTE", AHORA + 3600),
+        String token = armarToken(HEADER, armarContenido("crediya-autenticacion-ms", "CLIENTE", AHORA + 3600),
                 "otro-secreto-distinto-tambien-de-mas-de-32");
 
         assertTrue(adapter.validar(token).isEmpty());
@@ -64,19 +64,19 @@ class JwtTokenAdapterTest {
 
     @Test
     void rechazaOtroEmisor() throws Exception {
-        assertTrue(adapter.validar(token(HEADER, payload("otro-sistema", "CLIENTE", AHORA + 3600), SECRETO)).isEmpty());
+        assertTrue(adapter.validar(armarToken(HEADER, armarContenido("otro-sistema", "CLIENTE", AHORA + 3600), SECRETO)).isEmpty());
     }
 
     @Test
     void rechazaAlgoritmoDistinto() throws Exception {
-        String token = token("{\"alg\":\"none\"}", payload("crediya-autenticacion-ms", "CLIENTE", AHORA + 3600), SECRETO);
+        String token = armarToken("{\"alg\":\"none\"}", armarContenido("crediya-autenticacion-ms", "CLIENTE", AHORA + 3600), SECRETO);
 
         assertTrue(adapter.validar(token).isEmpty());
     }
 
     @Test
     void rechazaRolDesconocidoYBasura() throws Exception {
-        assertTrue(adapter.validar(token(HEADER, payload("crediya-autenticacion-ms", "JEFE", AHORA + 3600), SECRETO)).isEmpty());
+        assertTrue(adapter.validar(armarToken(HEADER, armarContenido("crediya-autenticacion-ms", "JEFE", AHORA + 3600), SECRETO)).isEmpty());
         assertTrue(adapter.validar("no-es-un-token").isEmpty());
         assertTrue(adapter.validar("a.b.c").isEmpty());
     }
