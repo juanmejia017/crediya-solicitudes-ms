@@ -57,7 +57,8 @@ Este microservicio no genera tokens: solo verifica la firma con el mismo `JWT_SE
 
 ```
 ApiRest.registrarSolicitudPrestamo
-        → ValidadorPeticion.validarPeticionAutenticada (token con AutenticacionUseCase.validarToken + cuerpo)
+        → ValidadorPeticion.validarPeticionAutenticada (saca el token del header Bearer,
+          AutenticacionUseCase.validarToken, cuerpo no vacío)
         → SolicitudUseCase.registrarSolicitudPrestamo (es cliente → validar → normalizar → es su propia solicitud
           → tipo → monto → estado → guardar)
         → SolicitudRepositoryAdapter (INSERT, SolicitudEntityMapper) → ApiRest (201)
@@ -80,8 +81,11 @@ Reglas:
 - La solicitud se registra siempre con el estado **"Pendiente de revisión"** (se ignora cualquier estado enviado).
 
 Organización del código:
-- **ApiRest:** solo recibe la petición HTTP, la delega y arma la respuesta.
-- **ValidadorPeticion** (`api/validacion`): valida el token y que el cuerpo no venga vacío, antes del caso de uso.
+- **ApiRest:** solo recibe la petición HTTP, la delega y arma la respuesta (sin logs ni validaciones).
+- **ValidadorPeticion** (`api/validacion`): lee el header `Authorization: Bearer`, hace validar el token, registra quién
+  hizo la petición y revisa que el cuerpo no venga vacío.
+- **SolicitudUseCase:** solo orquesta; las reglas viven en el modelo (`SolicitudValidator`, `Solicitud.perteneceA`,
+  `TipoPrestamo.validarMonto`).
 - **Adapters:** solo persisten o consultan; la conversión dominio ↔ entidad está en `jpa/mapper`
   (`SolicitudEntityMapper`, `TipoPrestamoEntityMapper`, `EstadoEntityMapper`).
 - **Nombres de métodos en español.** Se mantienen en inglés solo los que exige el framework: los métodos derivados de

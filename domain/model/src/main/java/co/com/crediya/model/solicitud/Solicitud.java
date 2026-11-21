@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import co.com.crediya.model.auth.UsuarioAutenticado;
 import co.com.crediya.model.estado.Estado;
 import co.com.crediya.model.tipoprestamo.TipoPrestamo;
 
@@ -41,6 +42,19 @@ public class Solicitud {
                 .email(email.trim().toLowerCase(Locale.ROOT))
                 .documentoIdentidad(documentoIdentidad.trim())
                 .build();
+    }
+
+    /**
+     * Regla: la solicitud es del usuario si el email coincide con el suyo y, cuando el usuario tiene
+     * documento registrado, también el documento. Se usa sobre la solicitud ya normalizada.
+     */
+    public boolean perteneceA(UsuarioAutenticado usuario) {
+        String correoDelUsuario = usuario.correoElectronico() == null
+                ? null : usuario.correoElectronico().trim().toLowerCase(Locale.ROOT);
+        boolean mismoCorreo = email.equals(correoDelUsuario);
+        boolean mismoDocumento = usuario.documentoIdentidad() == null
+                || documentoIdentidad.equals(usuario.documentoIdentidad().trim());
+        return mismoCorreo && mismoDocumento;
     }
 
     public Solicitud conEstado(Estado estadoAsignado) {

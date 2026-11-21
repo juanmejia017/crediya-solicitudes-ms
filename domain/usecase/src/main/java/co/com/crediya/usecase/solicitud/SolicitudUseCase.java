@@ -14,8 +14,6 @@ import co.com.crediya.model.tipoprestamo.TipoPrestamo;
 import co.com.crediya.model.tipoprestamo.gateways.TipoPrestamoRepository;
 import lombok.RequiredArgsConstructor;
 
-import java.util.Locale;
-
 @RequiredArgsConstructor
 public class SolicitudUseCase {
 
@@ -44,16 +42,8 @@ public class SolicitudUseCase {
         }
     }
 
-    /**
-     * El email (y el documento, si el cliente lo tiene registrado) deben ser los del usuario del token.
-     */
     private static void validarQueSeaPropia(Solicitud solicitud, UsuarioAutenticado solicitante) {
-        String correoDelToken = solicitante.correoElectronico() == null
-                ? null : solicitante.correoElectronico().trim().toLowerCase(Locale.ROOT);
-        boolean mismoCorreo = solicitud.getEmail().equals(correoDelToken);
-        boolean mismoDocumento = solicitante.documentoIdentidad() == null
-                || solicitud.getDocumentoIdentidad().equals(solicitante.documentoIdentidad().trim());
-        if (!mismoCorreo || !mismoDocumento) {
+        if (!solicitud.perteneceA(solicitante)) {
             throw new AccesoDenegadoException("Solo puedes crear solicitudes de préstamo a tu nombre: "
                     + "el email y el documento deben ser los de tu usuario");
         }
