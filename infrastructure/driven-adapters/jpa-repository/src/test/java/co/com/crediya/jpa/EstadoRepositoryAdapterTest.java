@@ -21,7 +21,7 @@ class EstadoRepositoryAdapterTest {
         when(repository.findByNombre(Estado.PENDIENTE_REVISION)).thenReturn(Optional.of(
                 EstadoEntity.builder().idEstado(1L).nombre(Estado.PENDIENTE_REVISION).descripcion("Inicial").build()));
 
-        Optional<Estado> estado = adapter.findByNombre(Estado.PENDIENTE_REVISION);
+        Optional<Estado> estado = adapter.buscarPorNombre(Estado.PENDIENTE_REVISION);
 
         assertTrue(estado.isPresent());
         assertEquals(1L, estado.get().getIdEstado());

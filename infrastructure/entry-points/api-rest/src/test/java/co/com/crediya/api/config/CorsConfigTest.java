@@ -25,9 +25,9 @@ class CorsConfigTest {
     }
 
     @Test
-    void testCorsFilter() {
+    void configuraElFiltroCors() {
         List<String> origins = List.of("http://example.com", "http://another.com");
-        FilterRegistrationBean<CorsFilter> filterRegistrationBean = corsConfig.corsFilter(origins);
+        FilterRegistrationBean<CorsFilter> filterRegistrationBean = corsConfig.filtroCors(origins);
 
         CorsFilter corsFilter = filterRegistrationBean.getFilter();
 

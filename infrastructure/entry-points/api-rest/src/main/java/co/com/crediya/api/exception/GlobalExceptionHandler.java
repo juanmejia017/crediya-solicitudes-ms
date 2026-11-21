@@ -26,80 +26,80 @@ import java.util.List;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(DatosInvalidosException.class)
-    public ResponseEntity<ErrorResponse> handleDatosInvalidos(DatosInvalidosException ex) {
+    public ResponseEntity<ErrorResponse> manejarDatosInvalidos(DatosInvalidosException ex) {
         log.warn("Datos inválidos: {}", ex.getErrores());
-        return build(HttpStatus.BAD_REQUEST, ex.getCodigo(), ex.getMessage(), ex.getErrores());
+        return construirRespuesta(HttpStatus.BAD_REQUEST, ex.getCodigo(), ex.getMessage(), ex.getErrores());
     }
 
     @ExceptionHandler({TipoPrestamoNoExisteException.class, MontoFueraDeRangoException.class})
-    public ResponseEntity<ErrorResponse> handleReglaPrestamo(BusinessException ex) {
+    public ResponseEntity<ErrorResponse> manejarReglaDePrestamo(BusinessException ex) {
         log.warn("Regla de negocio [{}]: {}", ex.getCodigo(), ex.getMessage());
-        return build(HttpStatus.UNPROCESSABLE_CONTENT, ex.getCodigo(), ex.getMessage(), List.of());
+        return construirRespuesta(HttpStatus.UNPROCESSABLE_CONTENT, ex.getCodigo(), ex.getMessage(), List.of());
     }
 
     @ExceptionHandler(NoAutenticadoException.class)
-    public ResponseEntity<ErrorResponse> handleNoAutenticado(NoAutenticadoException ex) {
+    public ResponseEntity<ErrorResponse> manejarNoAutenticado(NoAutenticadoException ex) {
         log.warn("Petición sin autenticación válida: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
-                .body(ErrorResponse.of(HttpStatus.UNAUTHORIZED.value(), ex.getCodigo(), ex.getMessage(), List.of()));
+                .body(ErrorResponse.crear(HttpStatus.UNAUTHORIZED.value(), ex.getCodigo(), ex.getMessage(), List.of()));
     }
 
     @ExceptionHandler(AccesoDenegadoException.class)
-    public ResponseEntity<ErrorResponse> handleAccesoDenegado(AccesoDenegadoException ex) {
+    public ResponseEntity<ErrorResponse> manejarAccesoDenegado(AccesoDenegadoException ex) {
         log.warn("Acceso denegado: {}", ex.getMessage());
-        return build(HttpStatus.FORBIDDEN, ex.getCodigo(), ex.getMessage(), List.of());
+        return construirRespuesta(HttpStatus.FORBIDDEN, ex.getCodigo(), ex.getMessage(), List.of());
     }
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex) {
+    public ResponseEntity<ErrorResponse> manejarErrorDeNegocio(BusinessException ex) {
         log.warn("Error de negocio [{}]: {}", ex.getCodigo(), ex.getMessage());
-        return build(HttpStatus.UNPROCESSABLE_CONTENT, ex.getCodigo(), ex.getMessage(), List.of());
+        return construirRespuesta(HttpStatus.UNPROCESSABLE_CONTENT, ex.getCodigo(), ex.getMessage(), List.of());
     }
 
     @ExceptionHandler(TechnicalException.class)
-    public ResponseEntity<ErrorResponse> handleTechnical(TechnicalException ex) {
+    public ResponseEntity<ErrorResponse> manejarErrorTecnico(TechnicalException ex) {
         log.error("Error técnico [{}]: {}", ex.getCodigo(), ex.getMessage());
         return errorInterno();
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleJsonInvalido(HttpMessageNotReadableException ex) {
+    public ResponseEntity<ErrorResponse> manejarJsonInvalido(HttpMessageNotReadableException ex) {
         log.warn("Cuerpo de la petición ilegible");
-        return build(HttpStatus.BAD_REQUEST, "JSON_INVALIDO",
+        return construirRespuesta(HttpStatus.BAD_REQUEST, "JSON_INVALIDO",
                 "El cuerpo de la petición es inválido. Revisa que monto sea numérico y plazo e idTipoPrestamo sean enteros",
                 List.of());
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-    public ResponseEntity<ErrorResponse> handleMediaType(HttpMediaTypeNotSupportedException ex) {
-        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "TIPO_CONTENIDO_NO_SOPORTADO",
+    public ResponseEntity<ErrorResponse> manejarTipoDeContenido(HttpMediaTypeNotSupportedException ex) {
+        return construirRespuesta(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "TIPO_CONTENIDO_NO_SOPORTADO",
                 "El Content-Type debe ser application/json", List.of());
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ErrorResponse> handleMetodo(HttpRequestMethodNotSupportedException ex) {
-        return build(HttpStatus.METHOD_NOT_ALLOWED, "METODO_NO_PERMITIDO",
+    public ResponseEntity<ErrorResponse> manejarMetodo(HttpRequestMethodNotSupportedException ex) {
+        return construirRespuesta(HttpStatus.METHOD_NOT_ALLOWED, "METODO_NO_PERMITIDO",
                 "El método HTTP no está permitido para este recurso", List.of());
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNoEncontrado(NoResourceFoundException ex) {
-        return build(HttpStatus.NOT_FOUND, "RECURSO_NO_ENCONTRADO", "El recurso solicitado no existe", List.of());
+    public ResponseEntity<ErrorResponse> manejarNoEncontrado(NoResourceFoundException ex) {
+        return construirRespuesta(HttpStatus.NOT_FOUND, "RECURSO_NO_ENCONTRADO", "El recurso solicitado no existe", List.of());
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
+    public ResponseEntity<ErrorResponse> manejarGeneral(Exception ex) {
         log.error("Error inesperado", ex);
         return errorInterno();
     }
 
     private ResponseEntity<ErrorResponse> errorInterno() {
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "ERROR_INTERNO",
+        return construirRespuesta(HttpStatus.INTERNAL_SERVER_ERROR, "ERROR_INTERNO",
                 "Ocurrió un error inesperado. Intenta de nuevo más tarde", List.of());
     }
 
-    private ResponseEntity<ErrorResponse> build(HttpStatus status, String codigo, String mensaje, List<String> detalles) {
-        return ResponseEntity.status(status).body(ErrorResponse.of(status.value(), codigo, mensaje, detalles));
+    private ResponseEntity<ErrorResponse> construirRespuesta(HttpStatus status, String codigo, String mensaje, List<String> detalles) {
+        return ResponseEntity.status(status).body(ErrorResponse.crear(status.value(), codigo, mensaje, detalles));
     }
 }

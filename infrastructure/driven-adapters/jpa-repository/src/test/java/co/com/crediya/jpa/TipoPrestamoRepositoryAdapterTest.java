@@ -33,7 +33,7 @@ class TipoPrestamoRepositoryAdapterTest {
                 .tasaInteres(new BigDecimal("1.80")).validacionAutomatica(true)
                 .build()));
 
-        Optional<TipoPrestamo> tipo = adapter.findByIdTipoPrestamo(1L);
+        Optional<TipoPrestamo> tipo = adapter.buscarPorId(1L);
 
         assertTrue(tipo.isPresent());
         assertEquals("Libre inversión", tipo.get().getNombre());
@@ -44,6 +44,6 @@ class TipoPrestamoRepositoryAdapterTest {
     void retornaVacioSiElTipoNoExiste() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
-        assertTrue(adapter.findByIdTipoPrestamo(99L).isEmpty());
+        assertTrue(adapter.buscarPorId(99L).isEmpty());
     }
 }

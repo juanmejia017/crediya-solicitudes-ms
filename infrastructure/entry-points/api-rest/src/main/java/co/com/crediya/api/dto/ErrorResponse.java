@@ -14,7 +14,7 @@ public record ErrorResponse(
         List<String> detalles,
         String traceId
 ) {
-    public static ErrorResponse of(int status, String codigo, String mensaje, List<String> detalles) {
+    public static ErrorResponse crear(int status, String codigo, String mensaje, List<String> detalles) {
         return new ErrorResponse(LocalDateTime.now(), status, codigo, mensaje, detalles, MDC.get(TraceIdFilter.TRACE_ID));
     }
 }
