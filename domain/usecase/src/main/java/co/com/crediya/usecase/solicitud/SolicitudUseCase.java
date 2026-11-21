@@ -2,18 +2,20 @@ package co.com.crediya.usecase.solicitud;
 
 import co.com.crediya.model.auth.UsuarioAutenticado;
 import co.com.crediya.model.estado.Estado;
+import co.com.crediya.model.estado.ValidadorEstado;
 import co.com.crediya.model.estado.gateways.EstadoRepository;
-import co.com.crediya.model.exceptions.AccesoDenegadoException;
-import co.com.crediya.model.exceptions.TechnicalException;
-import co.com.crediya.model.exceptions.TipoPrestamoNoExisteException;
-import co.com.crediya.model.rol.Rol;
 import co.com.crediya.model.solicitud.Solicitud;
-import co.com.crediya.model.solicitud.SolicitudValidator;
+import co.com.crediya.model.solicitud.ValidadorSolicitud;
 import co.com.crediya.model.solicitud.gateways.SolicitudRepository;
 import co.com.crediya.model.tipoprestamo.TipoPrestamo;
+import co.com.crediya.model.tipoprestamo.ValidadorTipoPrestamo;
 import co.com.crediya.model.tipoprestamo.gateways.TipoPrestamoRepository;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Registro de solicitudes de préstamo. Solo orquesta: las validaciones están en
+ * ValidadorSolicitud, ValidadorTipoPrestamo y ValidadorEstado.
+ */
 @RequiredArgsConstructor
 public class SolicitudUseCase {
 
@@ -21,42 +23,18 @@ public class SolicitudUseCase {
     private final TipoPrestamoRepository tipoPrestamoRepository;
     private final EstadoRepository estadoRepository;
 
-    /**
-     * Registra una solicitud. Solo la puede crear un cliente que inició sesión, y solo a su nombre.
-     */
     public Solicitud registrarSolicitudPrestamo(Solicitud solicitud, UsuarioAutenticado solicitante) {
-        validarQueSeaCliente(solicitante);
-        SolicitudValidator.validar(solicitud);
+        ValidadorSolicitud.validarRolCliente(solicitante);
+        ValidadorSolicitud.validarDatos(solicitud);
         Solicitud normalizada = solicitud.normalizada();
-        validarQueSeaPropia(normalizada, solicitante);
-        TipoPrestamo tipo = buscarTipoPrestamo(normalizada.getIdTipoPrestamo());
-        tipo.validarMonto(normalizada.getMonto());
-        Estado estadoInicial = buscarEstadoInicial();
+        ValidadorSolicitud.validarTitular(normalizada, solicitante);
+
+        Long idTipoPrestamo = normalizada.getIdTipoPrestamo();
+        TipoPrestamo tipo = ValidadorTipoPrestamo.validarExistencia(tipoPrestamoRepository.buscarPorId(idTipoPrestamo), idTipoPrestamo);
+        ValidadorTipoPrestamo.validarMonto(tipo, normalizada.getMonto());
+        Estado estadoInicial = ValidadorEstado.validarEstadoInicial(estadoRepository.buscarPorNombre(Estado.PENDIENTE_REVISION));
+
         Solicitud guardada = solicitudRepository.guardar(normalizada.conEstado(estadoInicial));
         return guardada.conDescripciones(estadoInicial, tipo);
-    }
-
-    private static void validarQueSeaCliente(UsuarioAutenticado solicitante) {
-        if (solicitante == null || !solicitante.tieneAlgunRol(Rol.CLIENTE)) {
-            throw new AccesoDenegadoException("Solo un cliente puede crear solicitudes de préstamo");
-        }
-    }
-
-    private static void validarQueSeaPropia(Solicitud solicitud, UsuarioAutenticado solicitante) {
-        if (!solicitud.perteneceA(solicitante)) {
-            throw new AccesoDenegadoException("Solo puedes crear solicitudes de préstamo a tu nombre: "
-                    + "el email y el documento deben ser los de tu usuario");
-        }
-    }
-
-    private TipoPrestamo buscarTipoPrestamo(Long idTipoPrestamo) {
-        return tipoPrestamoRepository.buscarPorId(idTipoPrestamo)
-                .orElseThrow(() -> new TipoPrestamoNoExisteException(idTipoPrestamo));
-    }
-
-    private Estado buscarEstadoInicial() {
-        return estadoRepository.buscarPorNombre(Estado.PENDIENTE_REVISION)
-                .orElseThrow(() -> new TechnicalException("ESTADO_INICIAL_NO_CONFIGURADO",
-                        "No existe el estado '" + Estado.PENDIENTE_REVISION + "' en la base de datos"));
     }
 }
