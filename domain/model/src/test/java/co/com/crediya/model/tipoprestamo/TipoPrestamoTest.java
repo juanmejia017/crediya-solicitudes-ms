@@ -17,22 +17,22 @@ class TipoPrestamoTest {
 
     @Test
     void aceptaMontosDentroDelRangoYEnLosLimites() {
-        assertDoesNotThrow(() -> libreInversion.validarMonto(new BigDecimal("1000000")));
-        assertDoesNotThrow(() -> libreInversion.validarMonto(new BigDecimal("25000000")));
-        assertDoesNotThrow(() -> libreInversion.validarMonto(new BigDecimal("50000000")));
+        assertDoesNotThrow(() -> ValidadorTipoPrestamo.validarMonto(libreInversion, new BigDecimal("1000000")));
+        assertDoesNotThrow(() -> ValidadorTipoPrestamo.validarMonto(libreInversion, new BigDecimal("25000000")));
+        assertDoesNotThrow(() -> ValidadorTipoPrestamo.validarMonto(libreInversion, new BigDecimal("50000000")));
     }
 
     @Test
     void rechazaMontoMenorAlMinimo() {
         BigDecimal monto = new BigDecimal("999999");
 
-        assertThrows(MontoFueraDeRangoException.class, () -> libreInversion.validarMonto(monto));
+        assertThrows(MontoFueraDeRangoException.class, () -> ValidadorTipoPrestamo.validarMonto(libreInversion, monto));
     }
 
     @Test
     void rechazaMontoMayorAlMaximo() {
         BigDecimal monto = new BigDecimal("50000001");
 
-        assertThrows(MontoFueraDeRangoException.class, () -> libreInversion.validarMonto(monto));
+        assertThrows(MontoFueraDeRangoException.class, () -> ValidadorTipoPrestamo.validarMonto(libreInversion, monto));
     }
 }
