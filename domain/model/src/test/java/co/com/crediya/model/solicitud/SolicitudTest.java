@@ -1,5 +1,8 @@
 package co.com.crediya.model.solicitud;
 
+import co.com.crediya.model.auth.UsuarioAutenticado;
+import co.com.crediya.model.rol.Rol;
+
 import co.com.crediya.model.estado.Estado;
 import co.com.crediya.model.tipoprestamo.TipoPrestamo;
 import org.junit.jupiter.api.Test;
@@ -7,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 class SolicitudTest {
@@ -42,5 +47,21 @@ class SolicitudTest {
         assertNull(conEstado.getEstado());
         assertEquals(Estado.PENDIENTE_REVISION, conDescripciones.getEstado());
         assertEquals("Libre inversión", conDescripciones.getTipoPrestamo());
+    }
+
+    @Test
+    void perteneceAlUsuarioConElMismoEmailYDocumento() {
+        Solicitud solicitud = Solicitud.builder().email("ana@correo.com").documentoIdentidad("1037654321").build();
+
+        assertTrue(solicitud.perteneceA(new UsuarioAutenticado(7L, " Ana@Correo.com ", "1037654321", Rol.CLIENTE)));
+        assertTrue(solicitud.perteneceA(new UsuarioAutenticado(7L, "ana@correo.com", null, Rol.CLIENTE)));
+    }
+
+    @Test
+    void noPerteneceSiElEmailOElDocumentoSonDeOtro() {
+        Solicitud solicitud = Solicitud.builder().email("ana@correo.com").documentoIdentidad("1037654321").build();
+
+        assertFalse(solicitud.perteneceA(new UsuarioAutenticado(7L, "pedro@correo.com", "1037654321", Rol.CLIENTE)));
+        assertFalse(solicitud.perteneceA(new UsuarioAutenticado(7L, "ana@correo.com", "9999999999", Rol.CLIENTE)));
     }
 }
