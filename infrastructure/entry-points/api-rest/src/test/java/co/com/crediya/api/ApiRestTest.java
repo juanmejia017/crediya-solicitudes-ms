@@ -1,10 +1,15 @@
 package co.com.crediya.api;
 
+import co.com.crediya.model.auth.UsuarioAutenticado;
+import co.com.crediya.model.exceptions.AccesoDenegadoException;
 import co.com.crediya.model.exceptions.DatosInvalidosException;
 import co.com.crediya.model.exceptions.MontoFueraDeRangoException;
+import co.com.crediya.model.exceptions.NoAutenticadoException;
 import co.com.crediya.model.exceptions.TechnicalException;
 import co.com.crediya.model.exceptions.TipoPrestamoNoExisteException;
+import co.com.crediya.model.rol.Rol;
 import co.com.crediya.model.solicitud.Solicitud;
+import co.com.crediya.usecase.autenticacion.AutenticacionUseCase;
 import co.com.crediya.usecase.solicitud.SolicitudUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +24,9 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(classes = TestConfig.class)
@@ -38,14 +46,22 @@ class ApiRestTest {
     @Autowired
     private WebApplicationContext context;
 
+    private static final String TOKEN = "Bearer token-cliente";
+    private static final UsuarioAutenticado CLIENTE =
+            new UsuarioAutenticado(7L, "juan@correo.com", "1020304050", Rol.CLIENTE);
+
     @MockitoBean
     private SolicitudUseCase solicitudUseCase;
+
+    @MockitoBean
+    private AutenticacionUseCase autenticacionUseCase;
 
     private RestTestClient client;
 
     @BeforeEach
     void setup() {
         client = RestTestClient.bindToApplicationContext(context).build();
+        when(autenticacionUseCase.validarToken(TOKEN)).thenReturn(CLIENTE);
     }
 
     @Test
@@ -56,9 +72,10 @@ class ApiRestTest {
                 .idTipoPrestamo(1L).tipoPrestamo("Libre inversión")
                 .idEstado(1L).estado("Pendiente de revisión")
                 .build();
-        when(solicitudUseCase.registrar(any())).thenReturn(creada);
+        when(solicitudUseCase.registrar(any(), eq(CLIENTE))).thenReturn(creada);
 
         client.post().uri(PATH)
+                .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BODY)
                 .exchange()
@@ -72,10 +89,11 @@ class ApiRestTest {
 
     @Test
     void retorna400SiLosDatosSonInvalidos() {
-        when(solicitudUseCase.registrar(any()))
+        when(solicitudUseCase.registrar(any(), eq(CLIENTE)))
                 .thenThrow(new DatosInvalidosException(List.of("El campo monto es obligatorio")));
 
         client.post().uri(PATH)
+                .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BODY)
                 .exchange()
@@ -88,6 +106,7 @@ class ApiRestTest {
     @Test
     void retorna400SiElCuerpoEstaVacio() {
         client.post().uri(PATH)
+                .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON)
                 .exchange()
                 .expectStatus().isBadRequest();
@@ -96,6 +115,7 @@ class ApiRestTest {
     @Test
     void retorna400SiElJsonEsInvalido() {
         client.post().uri(PATH)
+                .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body("{ \"monto\": \"mucho\" }")
                 .exchange()
@@ -106,9 +126,10 @@ class ApiRestTest {
 
     @Test
     void retorna422SiElTipoDePrestamoNoExiste() {
-        when(solicitudUseCase.registrar(any())).thenThrow(new TipoPrestamoNoExisteException(99L));
+        when(solicitudUseCase.registrar(any(), eq(CLIENTE))).thenThrow(new TipoPrestamoNoExisteException(99L));
 
         client.post().uri(PATH)
+                .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BODY)
                 .exchange()
@@ -119,10 +140,11 @@ class ApiRestTest {
 
     @Test
     void retorna422SiElMontoEstaFueraDeRango() {
-        when(solicitudUseCase.registrar(any()))
+        when(solicitudUseCase.registrar(any(), eq(CLIENTE)))
                 .thenThrow(new MontoFueraDeRangoException("Libre inversión", BigDecimal.ONE, BigDecimal.TEN));
 
         client.post().uri(PATH)
+                .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BODY)
                 .exchange()
@@ -134,6 +156,7 @@ class ApiRestTest {
     @Test
     void retorna415SiElContentTypeNoEsJson() {
         client.post().uri(PATH)
+                .header("Authorization", TOKEN)
                 .contentType(MediaType.TEXT_PLAIN)
                 .body("texto")
                 .exchange()
@@ -144,10 +167,11 @@ class ApiRestTest {
 
     @Test
     void retorna500GenericoSiHayErrorTecnico() {
-        when(solicitudUseCase.registrar(any()))
+        when(solicitudUseCase.registrar(any(), eq(CLIENTE)))
                 .thenThrow(new TechnicalException("ESTADO_INICIAL_NO_CONFIGURADO", "detalle interno"));
 
         client.post().uri(PATH)
+                .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BODY)
                 .exchange()
@@ -158,14 +182,46 @@ class ApiRestTest {
 
     @Test
     void retorna500GenericoSinExponerElDetalleDelError() {
-        when(solicitudUseCase.registrar(any())).thenThrow(new IllegalStateException("password=secreto"));
+        when(solicitudUseCase.registrar(any(), eq(CLIENTE))).thenThrow(new IllegalStateException("password=secreto"));
 
         client.post().uri(PATH)
+                .header("Authorization", TOKEN)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BODY)
                 .exchange()
                 .expectStatus().is5xxServerError()
                 .expectBody()
                 .jsonPath("$.mensaje").isEqualTo("Ocurrió un error inesperado. Intenta de nuevo más tarde");
+    }
+
+    @Test
+    void retorna401SinToken() {
+        when(autenticacionUseCase.validarToken(null)).thenThrow(new NoAutenticadoException("Debes iniciar sesión"));
+
+        client.post().uri(PATH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BODY)
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectHeader().valueEquals("WWW-Authenticate", "Bearer")
+                .expectBody()
+                .jsonPath("$.codigo").isEqualTo("NO_AUTENTICADO");
+
+        verify(solicitudUseCase, never()).registrar(any(), any());
+    }
+
+    @Test
+    void retorna403SiNoEsClienteOLaSolicitudEsDeOtro() {
+        when(solicitudUseCase.registrar(any(), eq(CLIENTE)))
+                .thenThrow(new AccesoDenegadoException("Solo puedes crear solicitudes de préstamo a tu nombre"));
+
+        client.post().uri(PATH)
+                .header("Authorization", TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BODY)
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody()
+                .jsonPath("$.codigo").isEqualTo("ACCESO_DENEGADO");
     }
 }
